@@ -48,10 +48,17 @@ public sealed class ConsoleSink : ILogSink
 
 public sealed class ConsoleSinkFactory : ILogSinkFactory
 {
+    private readonly IConsoleOutput _console;
+
+    public ConsoleSinkFactory(IConsoleOutput console)
+    {
+        _console = console;
+    }
+
     public string Name => "console";
 
     public ILogSink Create(LogHubConfig config)
     {
-        return new ConsoleSink(new SystemConsole());
+        return new ConsoleSink(_console);
     }
 }

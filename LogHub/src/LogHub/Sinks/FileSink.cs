@@ -25,13 +25,37 @@ public sealed class FileSink : ILogSink
     }
 }
 
+/// <summary>Шов для доступа к диску: тесты подменяют его на StringWriter.</summary>
+public interface ITextWriterFactory
+{
+    TextWriter Open(string path);
+}
+
+public sealed class FileWriterFactory : ITextWriterFactory
+{
+    public TextWriter Open(string path)
+    {
+        return new StreamWriter(path, append: true);
+    }
+}
+
 public sealed class FileSinkFactory : ILogSinkFactory
 {
+    private readonly TimeProvider _time;
+    private readonly ITextWriterFactory _writers;
+
+    public FileSinkFactory(TimeProvider time, ITextWriterFactory writers)
+    {
+        _time = time;
+        _writers = writers;
+    }
+
     public string Name => "file";
 
     public ILogSink Create(LogHubConfig config)
     {
-        var path = $"logs-{DateTime.Now:yyyyMMdd}.txt";
-        return new FileSink(new StreamWriter(path, append: true));
+        // Ключ path необязателен: без него имя берётся по дате, как в ЛР 4.
+        var path = config.Get("path", $"logs-{_time.GetLocalNow():yyyyMMdd}.txt");
+        return new FileSink(_writers.Open(path));
     }
 }

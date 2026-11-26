@@ -56,3 +56,43 @@ internal sealed class TelegramSinkFactory : ILogSinkFactory
 
     public ILogSink Create(LogHubConfig config) => new RecordingSink();
 }
+
+internal sealed class FixedDbClientFactory : IDbClientFactory
+{
+    private readonly IDbClient _client;
+
+    public FixedDbClientFactory(IDbClient client)
+    {
+        _client = client;
+    }
+
+    public IDbClient Create(string connectionString) => _client;
+}
+
+internal sealed class StringWriterFactory : ITextWriterFactory
+{
+    public StringWriter Writer { get; } = new();
+
+    public string? OpenedPath { get; private set; }
+
+    public TextWriter Open(string path)
+    {
+        OpenedPath = path;
+        return Writer;
+    }
+}
+
+/// <summary>Своя реализация IConfigService: настройки заданы заранее, файл не читается.</summary>
+internal sealed class FixedConfigService : IConfigService
+{
+    private readonly Dictionary<string, string> _values;
+
+    public FixedConfigService(params string[] lines)
+    {
+        _values = new Dictionary<string, string>(LogHubConfig.ParsePairs(lines));
+    }
+
+    public string? GetValue(string key) => _values.TryGetValue(key, out var value) ? value : null;
+
+    public void SetValue(string key, string value) => _values[key] = value;
+}

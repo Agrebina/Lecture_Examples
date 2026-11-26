@@ -8,7 +8,7 @@ namespace LogHub.Processing;
 public sealed record ProcessingResult(int Written, int Skipped);
 
 /// <summary>Разбор → фильтр по уровню → форматирование → запись. Диска и консоли не знает.</summary>
-public sealed class LogProcessor
+public sealed class LogProcessor : IDisposable
 {
     private readonly ILogParser _parser;
     private readonly ILogFormatter _formatter;
@@ -48,5 +48,11 @@ public sealed class LogProcessor
         }
 
         return new ProcessingResult(written, skipped);
+    }
+
+    /// <summary>Закрывает приёмник: процессор владеет им с момента создания.</summary>
+    public void Dispose()
+    {
+        _sink.Dispose();
     }
 }

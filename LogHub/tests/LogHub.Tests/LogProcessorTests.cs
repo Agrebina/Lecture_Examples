@@ -46,6 +46,16 @@ public class LogProcessorTests
     }
 
     [Fact]
+    public void Dispose_ClosesSink()
+    {
+        var sink = new RecordingSink();
+
+        Create(sink, "Info").Dispose();
+
+        Assert.True(sink.Disposed);
+    }
+
+    [Fact]
     public void Process_EmptyInput_WritesNothing()
     {
         var sink = new RecordingSink();
