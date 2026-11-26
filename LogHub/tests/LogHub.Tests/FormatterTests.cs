@@ -40,10 +40,10 @@ public class FormatterTests
     [Fact]
     public void Catalog_FindsAllFormattersInAssembly()
     {
-        var names = Processing.PluginCatalog.Discover<ILogFormatter>().Select(f => f.Name).ToList();
+        var types = Processing.PluginCatalog.FindTypes<ILogFormatter>();
 
-        Assert.Contains("plain", names);
-        Assert.Contains("json", names);
-        Assert.Contains("csv", names);
+        Assert.Contains(typeof(PlainFormatter), types);
+        Assert.Contains(typeof(JsonFormatter), types);
+        Assert.Contains(typeof(CsvFormatter), types);
     }
 }

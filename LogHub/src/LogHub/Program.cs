@@ -1,10 +1,8 @@
-using LogHub.Config;
-using LogHub.Formatting;
-using LogHub.Parsing;
+using LogHub.Composition;
 using LogHub.Processing;
-using LogHub.Sinks;
+using Microsoft.Extensions.DependencyInjection;
 
-// Композиционный корень: единственное место, где всё собирается и где есть доступ к диску.
+// Композиционный корень: единственное место, где собирается контейнер и где есть доступ к диску.
 if (args.Length < 1)
 {
     Console.Error.WriteLine("Использование: LogHub <файл-лога> [файл-конфигурации]");
@@ -15,22 +13,13 @@ var logPath = args[0];
 var configPath = args.Length > 1 ? args[1] : "loghub.config";
 
 var configLines = File.Exists(configPath) ? File.ReadAllLines(configPath) : Array.Empty<string>();
-var config = LogHubConfig.Parse(configLines);
 
-var sinks = new SinkRegistry(PluginCatalog.Discover<ILogSinkFactory>());
-var formatters = new FormatterRegistry(PluginCatalog.Discover<ILogFormatter>());
+using var provider = new ServiceCollection().AddLogHub().BuildLogHubProvider();
 
-ProcessingResult result;
-using (var sink = sinks.Create(config))
-{
-    var processor = new LogProcessor(
-        new DelimitedLogParser(config.Delimiter),
-        formatters.Get(config.Format),
-        sink,
-        config.MinSeverity);
+// Единственное обращение к IServiceProvider во всём приложении.
+var app = provider.GetRequiredService<LogHubApp>();
 
-    result = processor.Process(File.ReadLines(logPath));
-}
+var result = app.Run(configLines, File.ReadLines(logPath));
 
 Console.WriteLine($"Записано: {result.Written}, пропущено: {result.Skipped}");
 return 0;

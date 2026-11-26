@@ -6,11 +6,22 @@ namespace LogHub.Config;
 /// </summary>
 public sealed class LogHubConfig
 {
-    private readonly IReadOnlyDictionary<string, string> _values;
+    private readonly Func<string, string?> _lookup;
 
     public LogHubConfig(IReadOnlyDictionary<string, string> values)
+        : this(key => values.TryGetValue(key, out var value) ? value : null)
     {
-        _values = values;
+    }
+
+    /// <summary>Типизированный вид поверх сервиса конфигурации: значения читаются из него при обращении.</summary>
+    public LogHubConfig(IConfigService service)
+        : this(service.GetValue)
+    {
+    }
+
+    private LogHubConfig(Func<string, string?> lookup)
+    {
+        _lookup = lookup;
     }
 
     public string Sink => Get("sink", "console");
@@ -33,10 +44,15 @@ public sealed class LogHubConfig
 
     public string Get(string key, string defaultValue)
     {
-        return _values.TryGetValue(key, out var value) ? value : defaultValue;
+        return _lookup(key) ?? defaultValue;
     }
 
     public static LogHubConfig Parse(IEnumerable<string> lines)
+    {
+        return new LogHubConfig(ParsePairs(lines));
+    }
+
+    public static IReadOnlyDictionary<string, string> ParsePairs(IEnumerable<string> lines)
     {
         var values = new Dictionary<string, string>();
 
@@ -54,6 +70,6 @@ public sealed class LogHubConfig
             }
         }
 
-        return new LogHubConfig(values);
+        return values;
     }
 }

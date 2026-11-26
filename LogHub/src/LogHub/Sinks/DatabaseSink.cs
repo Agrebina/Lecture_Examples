@@ -72,13 +72,33 @@ public sealed class DatabaseSink : ILogSink
     }
 }
 
+public interface IDbClientFactory
+{
+    IDbClient Create(string connectionString);
+}
+
+public sealed class FakeDbClientFactory : IDbClientFactory
+{
+    public IDbClient Create(string connectionString)
+    {
+        return new FakeDbClient(connectionString);
+    }
+}
+
 public sealed class DatabaseSinkFactory : ILogSinkFactory
 {
+    private readonly IDbClientFactory _clients;
+
+    public DatabaseSinkFactory(IDbClientFactory clients)
+    {
+        _clients = clients;
+    }
+
     public string Name => "database";
 
     public ILogSink Create(LogHubConfig config)
     {
-        var client = new FakeDbClient(config.Connection);
+        var client = _clients.Create(config.Connection);
         client.Open();
         return new DatabaseSink(client);
     }

@@ -59,7 +59,7 @@ public class SinkTests
     [Fact]
     public void Registry_UnknownSink_ThrowsWithSameMessageAsBefore()
     {
-        var registry = new SinkRegistry(new ILogSinkFactory[] { new ConsoleSinkFactory() });
+        var registry = new SinkRegistry(new ILogSinkFactory[] { new ConsoleSinkFactory(new FakeConsole()) });
         var config = LogHubConfig.Parse(new[] { "sink = ftp" });
 
         var error = Assert.Throws<NotSupportedException>(() => registry.Create(config));
@@ -70,7 +70,7 @@ public class SinkTests
     [Fact]
     public void Registry_NewSinkFactory_IsUsedWithoutChangingExistingCode()
     {
-        var registry = new SinkRegistry(new ILogSinkFactory[] { new ConsoleSinkFactory(), new TelegramSinkFactory() });
+        var registry = new SinkRegistry(new ILogSinkFactory[] { new ConsoleSinkFactory(new FakeConsole()), new TelegramSinkFactory() });
         var config = LogHubConfig.Parse(new[] { "sink = telegram" });
 
         using var sink = registry.Create(config);
@@ -79,12 +79,23 @@ public class SinkTests
     }
 
     [Fact]
+    public void DatabaseSinkFactory_OpensClientFromInjectedFactory()
+    {
+        var client = new RecordingDbClient();
+        var factory = new DatabaseSinkFactory(new FixedDbClientFactory(client));
+
+        using var sink = factory.Create(LogHubConfig.Parse(new[] { "sink = database" }));
+
+        Assert.Equal(new[] { "open" }, client.Calls);
+    }
+
+    [Fact]
     public void Catalog_FindsBuiltInSinkFactories()
     {
-        var names = PluginCatalog.Discover<ILogSinkFactory>().Select(f => f.Name).ToList();
+        var types = PluginCatalog.FindTypes<ILogSinkFactory>();
 
-        Assert.Contains("console", names);
-        Assert.Contains("file", names);
-        Assert.Contains("database", names);
+        Assert.Contains(typeof(ConsoleSinkFactory), types);
+        Assert.Contains(typeof(FileSinkFactory), types);
+        Assert.Contains(typeof(DatabaseSinkFactory), types);
     }
 }
